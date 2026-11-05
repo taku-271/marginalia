@@ -18,3 +18,16 @@ export function bedrockModelArns(modelId: string, region: string, account: strin
   }
   return [`arn:${partition}:bedrock:${region}::foundation-model/${modelId}*`];
 }
+
+/**
+ * モデルごとの Converse 設定(additionalModelRequestFields と出力上限)。
+ * - Haiku 系: thinking を無効化できる。短い出力なので無効にする(仕様の maxTokens をそのまま使える)
+ * - Sonnet 5.5 / Opus 5.5 など: thinking を無効化すると 400 になるため既定(adaptive)のまま送らない。
+ *   思考にも出力トークンを使うので上限を広げる
+ */
+export function modelRuntimeSettings(modelId: string, baseMaxTokens: number) {
+  const isHaiku = /haiku/.test(modelId);
+  return isHaiku
+    ? { fields: { thinking: { type: "disabled" } }, maxTokens: baseMaxTokens }
+    : { fields: {}, maxTokens: Math.max(baseMaxTokens, 4000) };
+}

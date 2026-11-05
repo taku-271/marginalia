@@ -60,7 +60,7 @@ export function getConfig() {
       },
       P3: {
         modelId: process.env.NOTE_MODEL_ID || modelId,
-        maxTokens: 1500,
+        maxTokens: num("NOTE_MAX_TOKENS") ?? 1500,
         temperature: num("P3_TEMPERATURE"),
         additionalModelRequestFields: json("NOTE_MODEL_FIELDS", fields ?? {}),
       },

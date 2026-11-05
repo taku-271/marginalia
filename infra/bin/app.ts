@@ -3,7 +3,7 @@ import { MarginaliaStack } from "../lib/marginalia-stack.js";
 
 const app = new cdk.App();
 
-// モデルとリージョンは context で差し替え可能: cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5
+// モデルとリージョンは context で差し替え可能: cdk deploy -c noteModelId=jp.anthropic.claude-opus-5-5
 // リージョンは CDK_DEFAULT_REGION(CLI の設定リージョン)に引きずられないよう既定で東京に固定する。
 // jp. 推論プロファイルは日本リージョンからしか呼べないため。
 const region = (app.node.tryGetContext("region") as string | undefined) ?? "ap-northeast-1";

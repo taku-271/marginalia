@@ -23,7 +23,7 @@ describe("MarginaliaStack", () => {
   const stack = new MarginaliaStack(app, "Test", {
     env: { account: "123456789012", region: "ap-northeast-1" },
     modelId: "jp.anthropic.claude-haiku-5-5",
-    noteModelId: "jp.anthropic.claude-sonnet-5-5",
+    noteModelId: "global.anthropic.claude-sonnet-5-5",
     webDistDir: "/nonexistent",
   });
   const t = Template.fromStack(stack);
@@ -63,7 +63,7 @@ describe("MarginaliaStack", () => {
     const policies = JSON.stringify(t.findResources("AWS::IAM::Policy"));
     expect(policies).toContain(":bedrock:ap-northeast-1:");
     expect(policies).toContain(":inference-profile/jp.anthropic.claude-haiku-5-5");
-    expect(policies).toContain(":inference-profile/jp.anthropic.claude-sonnet-5-5");
+    expect(policies).toContain(":inference-profile/global.anthropic.claude-sonnet-5-5");
     expect(policies).toContain(":bedrock:*::foundation-model/anthropic.claude-sonnet-5-5*");
     expect(policies).not.toMatch(/"Resource":"\*"/);
   });
@@ -98,7 +98,11 @@ describe("MarginaliaStack", () => {
       Environment: {
         Variables: Match.objectLike({
           MODEL_ID: "jp.anthropic.claude-haiku-5-5",
-          NOTE_MODEL_ID: "jp.anthropic.claude-sonnet-5-5",
+          NOTE_MODEL_ID: "global.anthropic.claude-sonnet-5-5",
+          MODEL_FIELDS: '{"thinking":{"type":"disabled"}}',
+          // Sonnet 5.5 は thinking を無効化できないので送らず、上限を広げる
+          NOTE_MODEL_FIELDS: "{}",
+          NOTE_MAX_TOKENS: "4000",
         }),
       },
     });

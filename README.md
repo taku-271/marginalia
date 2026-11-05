@@ -57,8 +57,9 @@ npm run deploy     # フロントをビルドしてからデプロイ
 # ユーザー作成(招待制): 初回ログインで新しいパスワードを設定
 aws cognito-idp admin-create-user --profile marginalia --region ap-northeast-1 --user-pool-id <UserPoolId> --username you@example.com \
   --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
-# P3 だけ上位モデルにする例
-npx cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5
+# P3(読書ノート)だけ上位モデルにする例。thinking 設定と出力上限はモデルに合わせて自動で切り替わる
+npx cdk deploy -c noteModelId=jp.anthropic.claude-opus-5-5       # 日本国内で処理
+npx cdk deploy -c noteModelId=global.anthropic.claude-sonnet-5-5 # 国外のリージョンで処理されることがある
 ```
 
 - CloudFront → `/api/*` は Lambda 関数URL(AWS_IAM + OAC)、それ以外は S3(`web/dist` があればデプロイ)

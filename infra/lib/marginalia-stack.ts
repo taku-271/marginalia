@@ -13,7 +13,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import type { Construct } from "constructs";
-import { bedrockModelArns } from "./bedrock.js";
+import { bedrockModelArns, modelRuntimeSettings } from "./bedrock.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -36,6 +36,8 @@ export class MarginaliaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MarginaliaStackProps) {
     super(scope, id, props);
     const noteModelId = props.noteModelId ?? props.modelId;
+    const mainSettings = modelRuntimeSettings(props.modelId, 200);
+    const noteSettings = modelRuntimeSettings(noteModelId, 1500);
 
     // ---------------------------------------------------------------- DynamoDB
     const table = new dynamodb.TableV2(this, "Table", {
@@ -83,6 +85,9 @@ export class MarginaliaStack extends cdk.Stack {
         TABLE_NAME: table.tableName,
         MODEL_ID: props.modelId,
         NOTE_MODEL_ID: noteModelId,
+        MODEL_FIELDS: JSON.stringify(mainSettings.fields),
+        NOTE_MODEL_FIELDS: JSON.stringify(noteSettings.fields),
+        NOTE_MAX_TOKENS: String(noteSettings.maxTokens),
         BEDROCK_REGION: this.region,
         USER_POOL_ID: userPool.userPoolId,
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
