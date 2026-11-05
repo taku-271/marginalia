@@ -59,6 +59,15 @@ export class Repo {
     return strip<Book>(res.Item);
   }
 
+  async listBooks(userId: string): Promise<Book[]> {
+    const items = await queryAll(this.doc, {
+      TableName: this.table,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: { ":pk": keys.pk(userId), ":sk": "BOOK#" },
+    });
+    return items.map((i) => strip<Book>(i)!);
+  }
+
   async markBookFinished(userId: string, bookId: string, finishedAt: string) {
     await this.doc.send(
       new UpdateCommand({

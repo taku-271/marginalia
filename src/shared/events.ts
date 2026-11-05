@@ -102,6 +102,6 @@ export function parseClientEvent(raw: unknown): ClientEvent | null {
   return { ...env.data, type, props: p.data } as ClientEvent;
 }
 
-export const MAX_EVENTS_PER_REQUEST = 25;
+export { MAX_EVENTS_PER_REQUEST } from "./limits.js";
 
 export const EventsRequest = z.object({ events: z.array(z.unknown()) });

@@ -7,9 +7,50 @@ import type { EventTracker } from "./eventTracker.js";
  * イベントには本文を入れず、文字数・秒数などのメタ情報だけを入れる。
  */
 
+/** P3 の結果。回答が0件のときは empty: true と固定文 */
+export type NoteResponse =
+  | { bookId: string; markdown: string; modelId: string; generatedAt: string }
+  | { markdown: string; empty: true };
+
 export const FREE_NOTE_PROMPT = "他に残しておきたいことは?";
 
 export function createReadingFlow(api: ApiClient, events: EventTracker) {
+  function questionHandle(bookId: string, sessionId: string, question: string, questionType: QuestionType) {
+    const ctx = { bookId, sessionId };
+    return {
+      /** 問いの表示 → 回答 / スキップまでの可視時間を計る */
+      shown() {
+        events.screenView("question", ctx);
+        events.track(
+          "question_shown",
+          { questionType, questionLength: charLength(question) },
+          { ...ctx, screen: "question" },
+        );
+        const sw = events.stopwatch();
+        return {
+          async answer(answer: string) {
+            const secondsToAnswer = sw.stop();
+            const r = await api.post<{ reaction: string }>(
+              `/api/books/${bookId}/sessions/${sessionId}/answer`,
+              { answer },
+            );
+            events.track(
+              "answer_submit",
+              { questionType, answerLength: charLength(answer.trim()), secondsToAnswer },
+              ctx,
+            );
+            return r.reaction;
+          },
+          async skip() {
+            const secondsToSkip = sw.stop();
+            await api.post(`/api/books/${bookId}/sessions/${sessionId}/skip`);
+            events.track("question_skip", { questionType, secondsToSkip }, ctx);
+          },
+        };
+      },
+    };
+  }
+
   return {
     async createBook(title: string, author?: string) {
       const book = await api.post<{ bookId: string }>("/api/books", { title, author });
@@ -28,40 +69,13 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
       const res = await api.post<{ question: string; questionType: QuestionType; durationMinutes: number }>(
         `/api/books/${bookId}/sessions/${sessionId}/end`,
       );
-      const ctx = { bookId, sessionId };
-      events.track("reading_end", { durationMinutes: res.durationMinutes }, ctx);
-      return {
-        ...res,
-        /** 問いの表示 → 回答 / スキップまでの可視時間を計る */
-        shown() {
-          events.track(
-            "question_shown",
-            { questionType: res.questionType, questionLength: charLength(res.question) },
-            { ...ctx, screen: "question" },
-          );
-          const sw = events.stopwatch();
-          return {
-            async answer(answer: string) {
-              const secondsToAnswer = sw.stop();
-              const r = await api.post<{ reaction: string }>(
-                `/api/books/${bookId}/sessions/${sessionId}/answer`,
-                { answer },
-              );
-              events.track(
-                "answer_submit",
-                { questionType: res.questionType, answerLength: charLength(answer.trim()), secondsToAnswer },
-                ctx,
-              );
-              return r.reaction;
-            },
-            async skip() {
-              const secondsToSkip = sw.stop();
-              await api.post(`/api/books/${bookId}/sessions/${sessionId}/skip`);
-              events.track("question_skip", { questionType: res.questionType, secondsToSkip }, ctx);
-            },
-          };
-        },
-      };
+      events.track("reading_end", { durationMinutes: res.durationMinutes }, { bookId, sessionId });
+      return { ...res, ...questionHandle(bookId, sessionId, res.question, res.questionType) };
+    },
+
+    /** アプリを開き直したときなど、生成済みの問いから再開する(reading_end は記録しない) */
+    resumeQuestion(bookId: string, sessionId: string, question: string, questionType: QuestionType) {
+      return { question, questionType, ...questionHandle(bookId, sessionId, question, questionType) };
     },
 
     /** 自由入力。空なら free_note_skip だけ記録して API は呼ばない */
@@ -76,14 +90,14 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
     },
 
     async finishBook(bookId: string, sessionCount: number) {
-      const note = await api.post<{ markdown: string; empty?: boolean }>(`/api/books/${bookId}/finish`);
+      const note = await api.post<NoteResponse>(`/api/books/${bookId}/finish`);
       events.track("book_finish", { sessionCount }, { bookId });
       return note;
     },
 
     async regenerateNote(bookId: string) {
       events.track("note_regenerate", {}, { bookId });
-      return api.post<{ markdown: string; empty?: boolean }>(`/api/books/${bookId}/note/regenerate`);
+      return api.post<NoteResponse>(`/api/books/${bookId}/note/regenerate`);
     },
 
     /** 読書ノート / 履歴画面を開いたときに呼び、閉じるときに返り値の close() を呼ぶ */

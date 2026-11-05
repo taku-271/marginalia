@@ -17,10 +17,12 @@ function fakeDoc() {
       return () => listeners.splice(listeners.indexOf(cb), 1);
     },
   };
+  const pageHide: Array<() => void> = [];
   const env: TrackerEnv = {
     setInterval: (cb) => intervals.push(cb),
     isHidden: () => hidden,
     onVisibilityChange: (cb) => void listeners.push(cb),
+    onPageHide: (cb) => void pageHide.push(cb),
     isStandalone: () => true,
     now: () => new Date("2026-11-05T13:14:03.120Z"),
     stopwatchEnv,
@@ -34,6 +36,7 @@ function fakeDoc() {
       [...listeners].forEach((l) => l());
     },
     tick: () => intervals.forEach((i) => i()),
+    pageHide: () => pageHide.forEach((l) => l()),
   };
 }
 
@@ -113,6 +116,44 @@ describe("eventTracker", () => {
     expect(t.queueLength).toBe(1);
     await t.flush();
     expect((bodies().at(-1)!.events[0] as { type: string }).type).toBe("app_open");
+  });
+
+  it("pagehide でも keepalive で即送信", async () => {
+    const d = fakeDoc();
+    const { api, fetch } = fakeApi();
+    const t = createEventTracker({ api, appVersion: "0.1.0", env: d.env });
+    t.start();
+    d.pageHide();
+    await t.flush();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]![1]!.keepalive).toBe(true);
+  });
+
+  it("離脱時に未送信分を退避し、次回起動時に送る", async () => {
+    const d = fakeDoc();
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    // 1回目: 送信が始まらないうちにページが消える(api が返らない)
+    const hang = createApiClient({ getIdToken: () => new Promise<string>(() => {}), fetch: vi.fn() as never });
+    const t1 = createEventTracker({ api: hang, appVersion: "0.1.0", env: { ...d.env, storage } });
+    t1.start();
+    t1.track("free_note_skip", {});
+    d.pageHide();
+    // ブラウザは pagehide の後に visibilitychange(hidden) も出す。送信中の分も残っていること
+    d.setHidden(true);
+    expect(JSON.parse(store.get("marginalia.pendingEvents")!)).toHaveLength(2);
+
+    // 2回目の起動で送られ、退避分は消える
+    const { api, bodies } = fakeApi();
+    const t2 = createEventTracker({ api, appVersion: "0.1.0", env: { ...fakeDoc().env, storage } });
+    t2.start();
+    await t2.flush();
+    expect(bodies()[0]!.events.map((e) => (e as { type: string }).type)).toEqual(["app_open", "free_note_skip", "app_open"]);
+    expect(store.has("marginalia.pendingEvents")).toBe(false);
   });
 
   it("送信失敗は握りつぶす", async () => {

@@ -68,6 +68,30 @@ describe("MarginaliaStack", () => {
     expect(policies).not.toMatch(/"Resource":"\*"/);
   });
 
+  it("web/dist があればフロントをデプロイし config.json を書き出す", async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const dir = mkdtempSync(join(tmpdir(), "web-"));
+    mkdirSync(join(dir, "assets"));
+    writeFileSync(join(dir, "index.html"), "<!doctype html>");
+    writeFileSync(join(dir, "assets", "a-123.js"), "");
+    const s = new MarginaliaStack(new cdk.App(), "WithWeb", {
+      env: { account: "123456789012", region: "ap-northeast-1" },
+      modelId: "jp.anthropic.claude-haiku-5-5",
+      webDistDir: dir,
+    });
+    const tpl = Template.fromStack(s);
+    tpl.resourceCountIs("Custom::CDKBucketDeployment", 2);
+    tpl.hasResourceProperties("Custom::CDKBucketDeployment", {
+      SystemMetadata: { "cache-control": "no-cache" },
+      DistributionPaths: ["/*"],
+    });
+    tpl.hasResourceProperties("Custom::CDKBucketDeployment", {
+      SystemMetadata: { "cache-control": "public, max-age=31536000, immutable" },
+    });
+  });
+
   it("Lambda の環境変数", () => {
     t.hasResourceProperties("AWS::Lambda::Function", {
       Runtime: "nodejs22.x",

@@ -4,3 +4,6 @@ dist/
 export/
 .direnv/
 cdk.out/
+web/dist/
+web/.env.local
+web/public/config.json

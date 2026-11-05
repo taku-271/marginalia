@@ -204,6 +204,19 @@ export function createApp(deps: AppDeps) {
       return buildNote(userId, bookId);
     },
 
+    /** 本の一覧(登録の新しい順) */
+    async listBooks(userId: string) {
+      const books = await repo.listBooks(userId);
+      return books.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+
+    /** 本の詳細と全セッション(古い順)。履歴画面・読書中の再開に使う */
+    async getBook(userId: string, bookId: string) {
+      const book = await requireBook(userId, bookId);
+      const sessions = await repo.listSessions(userId, bookId);
+      return { book, sessions };
+    },
+
     async getNote(userId: string, bookId: string) {
       await requireBook(userId, bookId);
       const note = await repo.getNote(userId, bookId);

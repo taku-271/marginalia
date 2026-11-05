@@ -11,11 +11,27 @@ npm run typecheck
 npm test
 ```
 
+### フロント(Vite + React + PWA)
+
+```sh
+cp web/public/config.example.json web/public/config.json   # Cognito の ID(cdk deploy の出力)
+cp web/.env.example web/.env.local                          # DEV_API_ORIGIN に AppUrl
+npm run dev        # /api はデプロイ済みの CloudFront に転送
+npm run build:web  # web/dist に出力
+```
+
+本番では `config.json` は CDK がデプロイ時に書き出すので、ビルドし直す必要はありません。
+
+画面: 本棚 → 本 → 読書中(タイマー)→ 今回の1問 → ひとことリアクション → 自由入力 → 本 / 履歴 / 読書ノート
+
 ## AWS(CDK)
 
 ```sh
 npx cdk bootstrap aws://<account>/ap-northeast-1   # 初回のみ
-npm run deploy
+npm run deploy     # フロントをビルドしてからデプロイ
+# ユーザー作成(招待制): 初回ログインで新しいパスワードを設定
+aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --username you@example.com \
+  --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
 # P3 だけ上位モデルにする例
 npx cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5
 ```
@@ -32,7 +48,8 @@ npx cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5
 - `src/server/ai/` P1(今回の1問)/ P2(ひとことリアクション)/ P3(読書ノート)と質問タイプのローテーション
 - `src/server/events/` `POST /api/events` の検証・書き込み、`ai_call` の記録
 - `src/server/handlers/api.ts` Lambda エントリ(X-Id-Token の Cognito ID トークンを検証)
-- `src/client/` API クライアント、イベントトラッカー、可視時間ストップウォッチ
+- `src/client/` API クライアント、イベントトラッカー、可視時間ストップウォッチ、画面操作とイベント記録のまとめ(`readingFlow`)
+- `web/` フロント(Vite + React + vite-plugin-pwa)
 - `scripts/export-events.ts` 分析用 JSONL エクスポート
 - `infra/` CDK スタック
 

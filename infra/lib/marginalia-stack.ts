@@ -159,11 +159,28 @@ export class MarginaliaStack extends cdk.Stack {
       },
     });
 
+    // フロント: ハッシュ付きの assets/* は長期キャッシュ、それ以外(index.html, sw.js, manifest, config.json)は毎回確認。
+    // config.json は Cognito の ID をデプロイ時に書き出す(フロントをビルドし直さずに済むように)。
+    // prune: false にして、古いクライアントが参照する前のバージョンの assets を消さない。
     const webDist = props.webDistDir ?? join(ROOT, "web/dist");
     if (existsSync(webDist)) {
-      new s3deploy.BucketDeployment(this, "DeployWeb", {
-        sources: [s3deploy.Source.asset(webDist)],
+      new s3deploy.BucketDeployment(this, "DeployWebAssets", {
+        sources: [s3deploy.Source.asset(webDist, { exclude: ["*", "!assets", "!assets/**", "assets/**/*.map"] })],
         destinationBucket: webBucket,
+        prune: false,
+        cacheControl: [s3deploy.CacheControl.fromString("public, max-age=31536000, immutable")],
+      });
+      new s3deploy.BucketDeployment(this, "DeployWeb", {
+        sources: [
+          s3deploy.Source.asset(webDist, { exclude: ["assets/**", "*.map"] }),
+          s3deploy.Source.jsonData("config.json", {
+            userPoolId: userPool.userPoolId,
+            userPoolClientId: userPoolClient.userPoolClientId,
+          }),
+        ],
+        destinationBucket: webBucket,
+        prune: false,
+        cacheControl: [s3deploy.CacheControl.fromString("no-cache")],
         distribution,
         distributionPaths: ["/*"],
       });
