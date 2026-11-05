@@ -28,7 +28,11 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
         );
         const sw = events.stopwatch();
         return {
-          async answer(answer: string) {
+          /** 問いを読み上げたときに呼ぶ */
+          readAloud(auto: boolean) {
+            events.track("question_read_aloud", { questionType, auto }, ctx);
+          },
+          async answer(answer: string, opts: { usedVoice?: boolean } = {}) {
             const secondsToAnswer = sw.stop();
             const r = await api.post<{ reaction: string }>(
               `/api/books/${bookId}/sessions/${sessionId}/answer`,
@@ -36,7 +40,12 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
             );
             events.track(
               "answer_submit",
-              { questionType, answerLength: charLength(answer.trim()), secondsToAnswer },
+              {
+                questionType,
+                answerLength: charLength(answer.trim()),
+                secondsToAnswer,
+                ...(opts.usedVoice !== undefined ? { usedVoice: opts.usedVoice } : {}),
+              },
               ctx,
             );
             return r.reaction;
@@ -79,14 +88,18 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
     },
 
     /** 自由入力。空なら free_note_skip だけ記録して API は呼ばない */
-    async submitFreeNote(bookId: string, sessionId: string, note: string) {
+    async submitFreeNote(bookId: string, sessionId: string, note: string, opts: { usedVoice?: boolean } = {}) {
       const trimmed = note.trim();
       if (!trimmed) {
         events.track("free_note_skip", {}, { bookId, sessionId });
         return;
       }
       await api.post(`/api/books/${bookId}/sessions/${sessionId}/free-note`, { note: trimmed });
-      events.track("free_note_submit", { noteLength: charLength(trimmed) }, { bookId, sessionId });
+      events.track(
+        "free_note_submit",
+        { noteLength: charLength(trimmed), ...(opts.usedVoice !== undefined ? { usedVoice: opts.usedVoice } : {}) },
+        { bookId, sessionId },
+      );
     },
 
     async finishBook(bookId: string, sessionCount: number) {

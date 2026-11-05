@@ -33,10 +33,18 @@ export const CLIENT_EVENT_PROPS = {
   reading_end: z.object({ durationMinutes: nonNegInt }).strict(),
   question_shown: z.object({ questionType, questionLength: nonNegInt }).strict(),
   answer_submit: z
-    .object({ questionType, answerLength: nonNegInt, secondsToAnswer: seconds })
+    .object({
+      questionType,
+      answerLength: nonNegInt,
+      secondsToAnswer: seconds,
+      /** 音声入力(マイクボタン)を使ったか。仕様への追加 */
+      usedVoice: z.boolean().optional(),
+    })
     .strict(),
   question_skip: z.object({ questionType, secondsToSkip: seconds }).strict(),
-  free_note_submit: z.object({ noteLength: nonNegInt }).strict(),
+  /** 問いを読み上げたとき(auto: 自動読み上げ設定によるもの)。仕様への追加 */
+  question_read_aloud: z.object({ questionType, auto: z.boolean() }).strict(),
+  free_note_submit: z.object({ noteLength: nonNegInt, usedVoice: z.boolean().optional() }).strict(),
   free_note_skip: empty,
   book_finish: z.object({ sessionCount: nonNegInt }).strict(),
   note_view: z.object({ secondsViewed: seconds }).strict(),

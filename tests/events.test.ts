@@ -22,6 +22,13 @@ describe("parseClientEvent", () => {
     expect(parseClientEvent(base())).not.toBeNull();
   });
 
+  it("usedVoice / question_read_aloud(音声機能の追加分)を受け付ける", () => {
+    expect(parseClientEvent({ ...base(), props: { ...base().props, usedVoice: true } })).not.toBeNull();
+    expect(parseClientEvent({ ...base(), props: { ...base().props, usedVoice: "yes" } })).toBeNull();
+    expect(parseClientEvent({ ...base(), type: "question_read_aloud", props: { questionType: "apply", auto: false } })).not.toBeNull();
+    expect(parseClientEvent({ ...base(), type: "free_note_submit", props: { noteLength: 3, usedVoice: false } })).not.toBeNull();
+  });
+
   it("未知の type は破棄", () => {
     expect(parseClientEvent({ ...base(), type: "unknown" })).toBeNull();
     expect(parseClientEvent({ ...base(), type: "__proto__" })).toBeNull();

@@ -152,3 +152,22 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .history-item .memo { margin-top: 8px; color: var(--muted); white-space: pre-wrap; font-size: 15px; }
 
 .footer { text-align: center; padding: 8px 0 calc(env(safe-area-inset-bottom) + 24px); }
+
+/* 音声 */
+.voice-field { display: flex; flex-direction: column; gap: 6px; }
+.voice-input { position: relative; }
+.voice-input textarea { padding-right: 60px; }
+.mic {
+  position: absolute; right: 8px; bottom: 8px;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.mic.on { background: var(--accent); color: var(--accent-text); border-color: transparent; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
+@media (prefers-reduced-motion: reduce) { .mic.on { animation: none; } }
+.interim { margin: 0; color: var(--muted); font-size: 14px; }
+.speak-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: -4px; }
+.chip { font: inherit; font-size: 14px; padding: 6px 14px; min-height: 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.toggle input { width: 18px; height: 18px; accent-color: var(--accent); }

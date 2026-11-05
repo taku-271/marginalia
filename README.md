@@ -24,6 +24,21 @@ npm run build:web  # web/dist に出力
 
 画面: 本棚 → 本 → 読書中(タイマー)→ 今回の1問 → ひとことリアクション → 自由入力 → 本 / 履歴 / 読書ノート
 
+### 音声(ブラウザ標準機能のみ)
+
+- 問いの「▶ 読み上げ」(`speechSynthesis`)。「次から自動で読み上げる」は端末ごとに保存、初期値オフ
+- 回答欄・自由入力欄のマイクボタン(`SpeechRecognition`)。話した内容を欄の末尾に追加し、そのまま手で直せる
+- 対応していないブラウザではボタンを出さない(キーボードの音声入力はどこでも使える)
+
+### 仕様書のイベント一覧への追加
+
+| type / props | 内容 |
+|---|---|
+| `answer_submit.usedVoice` / `free_note_submit.usedVoice` | 音声入力を使ったか(任意) |
+| `question_read_aloud` `{ questionType, auto }` | 問いを読み上げた(auto は自動読み上げ) |
+
+未送信のイベントは、ページ離脱時に `localStorage` に退避して次回起動時に送る(仕様はメモリ上のキューのみ)。
+
 ## AWS(CDK)
 
 ```sh

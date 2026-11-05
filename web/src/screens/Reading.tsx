@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { QuestionType } from "../../../src/shared/questionTypes";
 import { FREE_NOTE_PROMPT } from "../../../src/client/readingFlow";
 import { formatElapsed } from "../format";
+import { canSpeak, primeSpeech, speak, stopSpeaking, useAutoRead } from "../speech";
+import { VoiceField } from "../VoiceField";
 import { Link, useRouter } from "../router";
 import { api, events, flow } from "../services";
 import type { Book, ReadingSession } from "../types";
@@ -57,6 +59,7 @@ export function Reading({ bookId, sessionId }: { bookId: string; sessionId: stri
   }, [stage.kind, bookId, navigate]);
 
   async function endReading() {
+    primeSpeech(); // iOS: タップの中で一度鳴らしておくと、問いの自動読み上げが効く
     setStage({ kind: "thinking" });
     try {
       const r = await flow.endReading(bookId, sessionId);
@@ -131,21 +134,34 @@ function Question(props: {
 }) {
   const handle = useRef<QuestionHandle | null>(null);
   const [answer, setAnswer] = useState("");
+  const [usedVoice, setUsedVoice] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [autoRead, setAutoRead] = useAutoRead();
 
-  // 表示1回につき question_shown を1回だけ記録し、ストップウォッチを始める
+  function readAloud(auto: boolean) {
+    if (!handle.current) return;
+    setSpeaking(true);
+    speak(props.question, () => setSpeaking(false));
+    handle.current.readAloud(auto);
+  }
+
+  // 表示1回につき question_shown を1回だけ記録し、ストップウォッチを始める。設定がオンなら読み上げる
   useEffect(() => {
-    if (!handle.current) {
-      handle.current = flow.resumeQuestion(props.bookId, props.sessionId, props.question, props.questionType).shown();
-    }
+    if (handle.current) return;
+    handle.current = flow.resumeQuestion(props.bookId, props.sessionId, props.question, props.questionType).shown();
+    if (autoRead && canSpeak()) readAloud(true);
+    return () => stopSpeaking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.bookId, props.sessionId, props.question, props.questionType]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!answer.trim() || !handle.current) return;
+    stopSpeaking();
     setBusy(true);
     try {
-      props.onDone(await handle.current.answer(answer));
+      props.onDone(await handle.current.answer(answer, { usedVoice }));
     } catch (err) {
       events.captureError("question.answer", err);
       alert("送信できませんでした。もう一度お試しください。");
@@ -155,6 +171,7 @@ function Question(props: {
 
   async function skip() {
     if (!handle.current) return;
+    stopSpeaking();
     setBusy(true);
     try {
       await handle.current.skip();
@@ -168,13 +185,29 @@ function Question(props: {
   return (
     <form className="stack question" onSubmit={submit}>
       <p className="question-text">{props.question}</p>
-      <textarea
+      {canSpeak() && (
+        <div className="speak-row">
+          <button
+            type="button"
+            className="chip"
+            onClick={() => (speaking ? (stopSpeaking(), setSpeaking(false)) : readAloud(false))}
+          >
+            {speaking ? "■ 止める" : "▶ 読み上げ"}
+          </button>
+          <label className="toggle">
+            <input type="checkbox" checked={autoRead} onChange={(e) => setAutoRead(e.target.checked)} />
+            <span>次から自動で読み上げる</span>
+          </label>
+        </div>
+      )}
+      <VoiceField
         className="answer"
         value={answer}
-        onChange={(e) => setAnswer(e.target.value)}
+        onChange={setAnswer}
+        onVoiceUsed={() => setUsedVoice(true)}
         placeholder="思いついたことを、ひとことで"
         rows={4}
-        autoFocus
+        label="回答"
       />
       <div className="row">
         <button type="button" className="btn ghost" onClick={skip} disabled={busy}>
@@ -190,13 +223,14 @@ function Question(props: {
 
 function FreeNote(props: { bookId: string; sessionId: string; reaction?: string; onDone: () => void }) {
   const [note, setNote] = useState("");
+  const [usedVoice, setUsedVoice] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function close(e?: FormEvent) {
     e?.preventDefault();
     setBusy(true);
     try {
-      await flow.submitFreeNote(props.bookId, props.sessionId, note);
+      await flow.submitFreeNote(props.bookId, props.sessionId, note, { usedVoice });
       props.onDone();
     } catch (err) {
       events.captureError("free_note.submit", err);
@@ -208,10 +242,17 @@ function FreeNote(props: { bookId: string; sessionId: string; reaction?: string;
   return (
     <form className="stack" onSubmit={close}>
       {props.reaction && <p className="reaction">{props.reaction}</p>}
-      <label className="field">
+      <div className="field">
         <span>{FREE_NOTE_PROMPT}</span>
-        <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="なければそのまま閉じてOK" />
-      </label>
+        <VoiceField
+          value={note}
+          onChange={setNote}
+          onVoiceUsed={() => setUsedVoice(true)}
+          rows={3}
+          placeholder="なければそのまま閉じてOK"
+          label={FREE_NOTE_PROMPT}
+        />
+      </div>
       <div className="row">
         <button className="btn primary" disabled={busy}>
           {note.trim() ? "残して閉じる" : "閉じる"}
