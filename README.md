@@ -41,11 +41,21 @@ npm run build:web  # web/dist に出力
 
 ## AWS(CDK)
 
+AWS の認証は名前付きプロファイル `marginalia` を使う(`cdk.json` の `profile`)。初回に作成しておく:
+
+```sh
+aws configure --profile marginalia        # アクセスキーの場合
+aws configure sso --profile marginalia    # IAM Identity Center(SSO)の場合
+aws sts get-caller-identity --profile marginalia   # 確認
+```
+
+一時的に別のプロファイルを使うときは `npx cdk deploy --profile <name>`。
+
 ```sh
 npx cdk bootstrap aws://<account>/ap-northeast-1   # 初回のみ
 npm run deploy     # フロントをビルドしてからデプロイ
 # ユーザー作成(招待制): 初回ログインで新しいパスワードを設定
-aws cognito-idp admin-create-user --user-pool-id <UserPoolId> --username you@example.com \
+aws cognito-idp admin-create-user --profile marginalia --region ap-northeast-1 --user-pool-id <UserPoolId> --username you@example.com \
   --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
 # P3 だけ上位モデルにする例
 npx cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5

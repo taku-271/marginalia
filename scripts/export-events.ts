@@ -1,7 +1,9 @@
 /**
  * 指定期間のイベントとセッションを JSONL に書き出す(Claude に渡して分析する用)。
  *
- *   npm run export-events -- --from 2026-11-01 --to 2026-11-30 [--user <userId>] [--table <name>] [--out ./export]
+ *   npm run export-events -- --from 2026-11-01 --to 2026-11-30 [--user <userId>] [--table <name>] [--out ./export] [--profile <name>]
+ *
+ * - AWS の認証は名前付きプロファイル(既定 marginalia。--profile か環境変数 AWS_PROFILE で変更)
  *
  * - 日付は日本時間(Asia/Tokyo)の日付として解釈し、--to の日の終わりまでを含む
  * - --user 省略時はテーブル全体を Scan して全ユーザー分を出す(MVP の少人数利用を想定)
@@ -58,11 +60,15 @@ async function main() {
       user: { type: "string" },
       table: { type: "string" },
       out: { type: "string", default: "./export" },
+      profile: { type: "string" },
     },
   });
+  // SDK はクライアント作成後の認証解決時に AWS_PROFILE を読む
+  process.env.AWS_PROFILE = values.profile ?? process.env.AWS_PROFILE ?? "marginalia";
+  process.env.AWS_REGION ??= "ap-northeast-1";
   const table = values.table ?? process.env.TABLE_NAME;
   if (!table || !values.from || !values.to) {
-    console.error("usage: export-events --from YYYY-MM-DD --to YYYY-MM-DD [--user id] [--table name] [--out dir]");
+    console.error("usage: export-events --from YYYY-MM-DD --to YYYY-MM-DD [--user id] [--table name] [--out dir] [--profile name]");
     process.exit(1);
   }
   const { start, end } = jstRange(values.from, values.to);
