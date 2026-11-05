@@ -7,7 +7,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export-events": "tsx scripts/export-events.ts"
+    "export-events": "tsx scripts/export-events.ts",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy"
   },
   "repository": {
     "type": "git",
@@ -24,7 +27,11 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.164",
     "@types/node": "^26.6.6",
+    "aws-cdk": "^2.1147.0",
+    "aws-cdk-lib": "^2.275.0",
     "aws-sdk-client-mock": "^4.1.0",
+    "constructs": "^10.8.1",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"

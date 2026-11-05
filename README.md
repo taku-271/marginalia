@@ -11,6 +11,21 @@ npm run typecheck
 npm test
 ```
 
+## AWS(CDK)
+
+```sh
+npx cdk bootstrap aws://<account>/ap-northeast-1   # 初回のみ
+npm run deploy
+# P3 だけ上位モデルにする例
+npx cdk deploy -c noteModelId=jp.anthropic.claude-sonnet-5-5
+```
+
+- CloudFront → `/api/*` は Lambda 関数URL(AWS_IAM + OAC)、それ以外は S3(`web/dist` があればデプロイ)
+- DynamoDB シングルテーブル(PK/SK、PITR・削除保護あり、スタック削除時も保持)
+- Cognito ユーザープール(MVP は招待制。ユーザーはコンソール等で作成)
+- Lambda には指定モデルの `bedrock:InvokeModel` だけを付与
+- リージョンは既定で `ap-northeast-1`(`jp.` 推論プロファイルのため)。`-c region=...` で変更
+
 ## 構成
 
 - `src/shared/` フロント・サーバー共通(イベントスキーマ、質問タイプ)
@@ -19,6 +34,7 @@ npm test
 - `src/server/handlers/api.ts` Lambda エントリ(X-Id-Token の Cognito ID トークンを検証)
 - `src/client/` API クライアント、イベントトラッカー、可視時間ストップウォッチ
 - `scripts/export-events.ts` 分析用 JSONL エクスポート
+- `infra/` CDK スタック
 
 ## 環境変数
 
