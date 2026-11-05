@@ -1,0 +1,32 @@
+{
+  "name": "marginalia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "読書アウトプットMVP: プロンプト(P1〜P3)とイベントログ",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "export-events": "tsx scripts/export-events.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/taku-271/marginalia.git"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1162.0",
+    "@aws-sdk/client-dynamodb": "^3.1162.0",
+    "@aws-sdk/lib-dynamodb": "^3.1162.0",
+    "aws-jwt-verify": "^5.2.1",
+    "ulid": "^3.0.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.164",
+    "@types/node": "^26.6.6",
+    "aws-sdk-client-mock": "^4.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
