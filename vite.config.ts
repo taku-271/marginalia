@@ -1,9 +1,11 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const webRoot = fileURLToPath(new URL("./web", import.meta.url));
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, webRoot, "");
@@ -11,7 +13,7 @@ export default defineConfig(({ mode }) => {
     root: webRoot,
     envDir: webRoot,
     define: {
-      __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? "0.0.0"),
+      __APP_VERSION__: JSON.stringify(version),
     },
     build: {
       outDir: "dist",

@@ -1,7 +1,7 @@
 /**
  * 指定期間のイベントとセッションを JSONL に書き出す(Claude に渡して分析する用)。
  *
- *   npm run export-events -- --from 2026-11-01 --to 2026-11-30 [--user <userId>] [--table <name>] [--out ./export] [--profile <name>]
+ *   bun run export-events --from 2026-11-01 --to 2026-11-30 [--user <userId>] [--table <name>] [--out ./export] [--profile <name>]
  *
  * - AWS の認証は名前付きプロファイル(既定 marginalia。--profile か環境変数 AWS_PROFILE で変更)
  *

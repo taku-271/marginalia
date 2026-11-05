@@ -75,7 +75,7 @@ export class MarginaliaStack extends cdk.Stack {
     const api = new nodejs.NodejsFunction(this, "Api", {
       entry: join(ROOT, "src/server/handlers/api.ts"),
       handler: "handler",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
       memorySize: 512,
       // P3(maxTokens 1500)が収まる長さ。CloudFront のオリジン応答タイムアウトも合わせる
@@ -94,7 +94,7 @@ export class MarginaliaStack extends cdk.Stack {
       },
       bundling: {
         format: nodejs.OutputFormat.ESM,
-        target: "node22",
+        target: "node24",
         minify: true,
         sourceMap: true,
         // ESM バンドル内で CommonJS 依存が require を使えるようにする

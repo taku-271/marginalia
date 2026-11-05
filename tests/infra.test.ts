@@ -94,7 +94,7 @@ describe("MarginaliaStack", () => {
 
   it("Lambda の環境変数", () => {
     t.hasResourceProperties("AWS::Lambda::Function", {
-      Runtime: "nodejs22.x",
+      Runtime: "nodejs24.x",
       Environment: {
         Variables: Match.objectLike({
           MODEL_ID: "jp.anthropic.claude-haiku-5-5",

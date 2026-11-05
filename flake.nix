@@ -13,11 +13,10 @@
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [
-            pkgs.nodejs_22 # npm 同梱
-          ];
+          # ローカルは bun だけ(Node / npm は入れない)。Lambda の実行環境は AWS 側の Node 24
+          packages = [ pkgs.bun ];
           shellHook = ''
-            echo "node $(node -v) / npm $(npm -v)"
+            echo "bun $(bun --version)"
           '';
         };
       });

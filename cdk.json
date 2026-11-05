@@ -1,5 +1,5 @@
 {
-  "app": "npx tsx infra/bin/app.ts",
+  "app": "bun infra/bin/app.ts",
   "profile": "marginalia",
   "watch": {
     "include": [

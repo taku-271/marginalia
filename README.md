@@ -5,10 +5,10 @@
 ## 開発環境
 
 ```sh
-nix develop      # Node 22 / npm(direnv なら .envrc で自動)
-npm install
-npm run typecheck
-npm test
+nix develop      # bun だけが入る(Node / npm は使わない。direnv なら .envrc で自動)
+bun install
+bun run typecheck
+bun run test     # vitest(bun 上で実行)
 ```
 
 ### フロント(Vite + React + PWA)
@@ -16,8 +16,8 @@ npm test
 ```sh
 cp web/public/config.example.json web/public/config.json   # Cognito の ID(cdk deploy の出力)
 cp web/.env.example web/.env.local                          # DEV_API_ORIGIN に AppUrl
-npm run dev        # /api はデプロイ済みの CloudFront に転送
-npm run build:web  # web/dist に出力
+bun run dev        # /api はデプロイ済みの CloudFront に転送
+bun run build:web  # web/dist に出力
 ```
 
 本番では `config.json` は CDK がデプロイ時に書き出すので、ビルドし直す必要はありません。
@@ -49,22 +49,23 @@ aws configure sso --profile marginalia    # IAM Identity Center(SSO)の場合
 aws sts get-caller-identity --profile marginalia   # 確認
 ```
 
-一時的に別のプロファイルを使うときは `npx cdk deploy --profile <name>`。
+一時的に別のプロファイルを使うときは `bun run cdk deploy --profile <name>`。
 
 ```sh
-npx cdk bootstrap aws://<account>/ap-northeast-1   # 初回のみ
-npm run deploy     # フロントをビルドしてからデプロイ
+bun run cdk bootstrap   # 初回のみ(profile=marginalia の ap-northeast-1)
+bun run deploy     # フロントをビルドしてからデプロイ
 # ユーザー作成(招待制): 初回ログインで新しいパスワードを設定
 aws cognito-idp admin-create-user --profile marginalia --region ap-northeast-1 --user-pool-id <UserPoolId> --username you@example.com \
   --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
 # P3(読書ノート)だけ上位モデルにする例。thinking 設定と出力上限はモデルに合わせて自動で切り替わる
-npx cdk deploy -c noteModelId=jp.anthropic.claude-opus-5-5       # 日本国内で処理
-npx cdk deploy -c noteModelId=global.anthropic.claude-sonnet-5-5 # 国外のリージョンで処理されることがある
+bun run cdk deploy -c noteModelId=jp.anthropic.claude-opus-5-5       # 日本国内で処理
+bun run cdk deploy -c noteModelId=global.anthropic.claude-sonnet-5-5 # 国外のリージョンで処理されることがある
 ```
 
 - CloudFront → `/api/*` は Lambda 関数URL(AWS_IAM + OAC)、それ以外は S3(`web/dist` があればデプロイ)
 - DynamoDB シングルテーブル(PK/SK、PITR・削除保護あり、スタック削除時も保持)
 - Cognito ユーザープール(MVP は招待制。ユーザーはコンソール等で作成)
+- Lambda の実行環境は Node.js 24(AWS 側。ローカルに Node は不要で、バンドルは esbuild)
 - Lambda には指定モデルの `bedrock:InvokeModel` だけを付与
 - リージョンは既定で `ap-northeast-1`(`jp.` 推論プロファイルのため)。`-c region=...` で変更
 
