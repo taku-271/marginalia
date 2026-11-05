@@ -52,16 +52,22 @@ aws sts get-caller-identity --profile marginalia   # 確認
 一時的に別のプロファイルを使うときは `bun run cdk deploy --profile <name>`。
 
 ```sh
-bun run cdk bootstrap   # 初回のみ(profile=marginalia の ap-northeast-1)
-bun run deploy     # フロントをビルドしてからデプロイ
+bun run cdk bootstrap   # 初回のみ。ap-northeast-1 と us-east-1 の両方が準備される
+bun run deploy     # フロントをビルドしてから 3 スタックをデプロイ(cdk deploy --all)
 # ユーザー作成(招待制): 初回ログインで新しいパスワードを設定
 aws cognito-idp admin-create-user --profile marginalia --region ap-northeast-1 --user-pool-id <UserPoolId> --username you@example.com \
   --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
 # P3(読書ノート)だけ上位モデルにする例。thinking 設定と出力上限はモデルに合わせて自動で切り替わる
-bun run cdk deploy -c noteModelId=jp.anthropic.claude-opus-5-5       # 日本国内で処理
-bun run cdk deploy -c noteModelId=global.anthropic.claude-sonnet-5-5 # 国外のリージョンで処理されることがある
+bun run cdk deploy --all -c noteModelId=jp.anthropic.claude-opus-5-5       # 日本国内で処理
+bun run cdk deploy --all -c noteModelId=global.anthropic.claude-sonnet-5-5 # 国外のリージョンで処理されることがある
 ```
 
+- CloudFront は**定額料金プランの Free**($0/月、目安は月 100 万リクエスト・100 GB。超えても課金はなく、配信が遅くなることがあるだけ)
+  - スタックは 3 つ: `MarginaliaWaf`(us-east-1、WAF の Web ACL。プランの必須条件)→ `Marginalia`(ap-northeast-1、本体)→ `MarginaliaPlan`(us-east-1、Free プランのサブスクリプション)
+  - WAF ルールは 4 個(Free の上限 5): IP ごとのリクエスト数制限、AWS 管理ルール 3 種(本文 8KB 超のブロックは記録のみ)
+  - Free の制約: 独自のキャッシュ/オリジンリクエストポリシー不可、ビヘイビア 5 個まで、1 アカウント 3 個まで
+  - **AWS の無料プラン(クレジット制)のアカウントでは使えない**。その場合は `-c cloudfrontPlan=payg` で従量課金(WAF もプランも作らない)
+  - 片付けるときは `cdk destroy --all`(サブスクリプションが先に消え、Free は即時解約される)
 - CloudFront → `/api/*` は Lambda 関数URL(AWS_IAM + OAC)、それ以外は S3(`web/dist` があればデプロイ)
 - DynamoDB シングルテーブル(PK/SK、PITR・削除保護あり、スタック削除時も保持)
 - Cognito ユーザープール(MVP は招待制。ユーザーはコンソール等で作成)

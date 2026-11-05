@@ -24,6 +24,8 @@ export interface MarginaliaStackProps extends cdk.StackProps {
   noteModelId?: string;
   /** フロントのビルド成果物。存在すれば S3 にデプロイする */
   webDistDir?: string;
+  /** CloudFront に付ける WAF Web ACL(us-east-1)。定額料金プランの必須条件 */
+  webAclArn?: string;
 }
 
 /**
@@ -33,6 +35,8 @@ export interface MarginaliaStackProps extends cdk.StackProps {
  *   DynamoDB シングルテーブル(PK/SK)、Cognito ユーザープール、Bedrock(Converse)
  */
 export class MarginaliaStack extends cdk.Stack {
+  readonly distributionArn: string;
+
   constructor(scope: Construct, id: string, props: MarginaliaStackProps) {
     super(scope, id, props);
     const noteModelId = props.noteModelId ?? props.modelId;
@@ -141,7 +145,9 @@ export class MarginaliaStack extends cdk.Stack {
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       defaultRootObject: "index.html",
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
+      // 定額料金プランでは料金がエッジの範囲に依存しないので全エッジを使う
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
+      webAclId: props.webAclArn,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -167,6 +173,8 @@ export class MarginaliaStack extends cdk.Stack {
     // フロント: ハッシュ付きの assets/* は長期キャッシュ、それ以外(index.html, sw.js, manifest, config.json)は毎回確認。
     // config.json は Cognito の ID をデプロイ時に書き出す(フロントをビルドし直さずに済むように)。
     // prune: false にして、古いクライアントが参照する前のバージョンの assets を消さない。
+    this.distributionArn = `arn:${this.partition}:cloudfront::${this.account}:distribution/${distribution.distributionId}`;
+
     const webDist = props.webDistDir ?? join(ROOT, "web/dist");
     if (existsSync(webDist)) {
       new s3deploy.BucketDeployment(this, "DeployWebAssets", {

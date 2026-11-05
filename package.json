@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p web",
     "test": "vitest run",
     "cdk": "cdk",
-    "synth": "cdk synth",
-    "deploy": "bun run build:web && cdk deploy",
+    "synth": "cdk synth --all",
+    "deploy": "bun run build:web && cdk deploy --all",
     "export-events": "bun scripts/export-events.ts"
   },
   "repository": {
