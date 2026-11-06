@@ -8,7 +8,7 @@ import type { QuestionType } from "../../shared/questionTypes.js";
  *   読書ノート     SK: NOTE#<bookId>
  *   イベント       SK: EVENT#<timestamp(UTC ISO)>#<eventId>
  *
- * 自由入力はセッションの freeNote 属性として保存する。
+ * 自由入力はセッションの freeNote 属性、読書中のメモは memos 属性として保存する。
  */
 
 export const keys = {
@@ -43,6 +43,13 @@ export interface ReadingSession {
   reaction?: string;
   freeNote?: string;
   freeNoteAt?: string;
+  /** 読書中に残したメモ(古い順)。自由入力とは別 */
+  memos?: SessionMemo[];
+}
+
+export interface SessionMemo {
+  text: string;
+  at: string;
 }
 
 export interface ReadingNote {

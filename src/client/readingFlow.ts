@@ -102,6 +102,16 @@ export function createReadingFlow(api: ApiClient, events: EventTracker) {
       );
     },
 
+    /** 読書中のメモ。空なら何も送らない。保存後のメモ一覧を返す */
+    async addMemo(bookId: string, sessionId: string, text: string) {
+      const trimmed = text.trim();
+      if (!trimmed) return undefined;
+      return api.post<{ memos: { text: string; at: string }[] }>(
+        `/api/books/${bookId}/sessions/${sessionId}/memos`,
+        { text: trimmed },
+      );
+    },
+
     async finishBook(bookId: string, sessionCount: number) {
       const note = await api.post<NoteResponse>(`/api/books/${bookId}/finish`);
       events.track("book_finish", { sessionCount }, { bookId });
