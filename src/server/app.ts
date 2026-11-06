@@ -9,6 +9,7 @@ import {
   type AiCallLogger,
 } from "./ai/generate.js";
 import { decideQuestionType } from "./ai/questionType.js";
+import { extractTryAction } from "./ai/prompts/p3.js";
 import type { ReadingNote, ReadingSession } from "./db/model.js";
 import type { Repo } from "./db/repo.js";
 import { recordAiCall } from "./events/ingest.js";
@@ -91,9 +92,11 @@ export function createApp(deps: AppDeps) {
       },
     );
     if (result.markdown === null) return { markdown: NO_RECORD_NOTE, empty: true };
+    const tryAction = extractTryAction(result.markdown);
     const note: ReadingNote = {
       bookId,
       markdown: result.markdown,
+      ...(tryAction ? { tryAction } : {}),
       modelId: config.prompts.P3.modelId,
       generatedAt: now().toISOString(),
     };
