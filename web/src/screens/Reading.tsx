@@ -13,7 +13,7 @@ type QuestionHandle = ReturnType<ReturnType<typeof flow.resumeQuestion>["shown"]
 type Stage =
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "reading"; startedAt: string }
+  | { kind: "reading"; startedAt: string; memos: { text: string; at: string }[] }
   | { kind: "thinking" } // 問いを生成中
   | { kind: "question"; question: string; questionType: QuestionType }
   | { kind: "after"; reaction?: string } // 回答 or パスのあと。自由入力
@@ -38,7 +38,7 @@ export function Reading({ bookId, sessionId }: { bookId: string; sessionId: stri
         if (!s) return setStage({ kind: "error", message: "読書セッションが見つかりません" });
         if (!s.endedAt) {
           events.screenView("reading", { bookId, sessionId });
-          return setStage({ kind: "reading", startedAt: s.startedAt });
+          return setStage({ kind: "reading", startedAt: s.startedAt, memos: s.memos ?? [] });
         }
         if (s.question && !s.answer && !s.skipped) {
           return setStage({ kind: "question", question: s.question, questionType: s.questionType! });
@@ -80,7 +80,7 @@ export function Reading({ bookId, sessionId }: { bookId: string; sessionId: stri
 
       {stage.kind === "loading" && <p className="muted">読み込み中…</p>}
       {stage.kind === "error" && <p className="error">{stage.message}</p>}
-      {stage.kind === "reading" && <ReadingTimer startedAt={stage.startedAt} onEnd={endReading} />}
+      {stage.kind === "reading" && <ReadingTimer bookId={bookId} sessionId={sessionId} startedAt={stage.startedAt} initialMemos={stage.memos} onEnd={endReading} />}
       {stage.kind === "thinking" && (
         <div className="center calm">
           <p className="muted">問いを考えています…</p>
@@ -107,7 +107,14 @@ export function Reading({ bookId, sessionId }: { bookId: string; sessionId: stri
   );
 }
 
-function ReadingTimer({ startedAt, onEnd }: { startedAt: string; onEnd: () => void }) {
+function ReadingTimer(props: {
+  bookId: string;
+  sessionId: string;
+  startedAt: string;
+  initialMemos: { text: string; at: string }[];
+  onEnd: () => void;
+}) {
+  const { startedAt, onEnd } = props;
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -121,7 +128,59 @@ function ReadingTimer({ startedAt, onEnd }: { startedAt: string; onEnd: () => vo
       <button className="btn primary large" onClick={onEnd}>
         読み終えた
       </button>
+      <MemoBox bookId={props.bookId} sessionId={props.sessionId} initial={props.initialMemos} />
     </div>
+  );
+}
+
+/** 読書中のメモ。タイマーは止めずに、テキストか音声で何件でも残せる */
+function MemoBox(props: { bookId: string; sessionId: string; initial: { text: string; at: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [memos, setMemos] = useState(props.initial);
+  const [busy, setBusy] = useState(false);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    try {
+      const res = await flow.addMemo(props.bookId, props.sessionId, text);
+      if (res) setMemos(res.memos);
+      setText("");
+    } catch (err) {
+      events.captureError("memo.add", err);
+      alert("メモを保存できませんでした。もう一度お試しください。");
+    }
+    setBusy(false);
+  }
+
+  if (!open) {
+    return (
+      <button className="btn ghost" onClick={() => setOpen(true)}>
+        📝 メモ{memos.length > 0 && `(${memos.length})`}
+      </button>
+    );
+  }
+  return (
+    <form className="stack memo-box" onSubmit={save}>
+      <VoiceField value={text} onChange={setText} rows={3} placeholder="思いついたことをメモ" label="読書中のメモ" />
+      <div className="row">
+        <button type="button" className="btn ghost" onClick={() => setOpen(false)}>
+          閉じる
+        </button>
+        <button className="btn primary" disabled={busy || !text.trim()}>
+          {busy ? "保存中…" : "メモを残す"}
+        </button>
+      </div>
+      {memos.length > 0 && (
+        <ul className="memo-list">
+          {memos.map((m) => (
+            <li key={m.at}>{m.text}</li>
+          ))}
+        </ul>
+      )}
+    </form>
   );
 }
 

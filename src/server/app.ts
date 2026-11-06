@@ -35,6 +35,7 @@ const dateFmt = new Intl.DateTimeFormat("sv-SE", { timeZone: TZ }); // YYYY-MM-D
 export const toLocalDate = (iso: string) => dateFmt.format(new Date(iso));
 
 const MAX_TEXT = 4000;
+const MAX_MEMOS = 200;
 
 function cleanText(v: unknown, field: string): string {
   if (typeof v !== "string") throw new HttpError(400, `${field} must be a string`);
@@ -190,6 +191,17 @@ export function createApp(deps: AppDeps) {
       const note = cleanText(body.note, "note");
       const { session } = await requireSession(userId, bookId, sessionId);
       await repo.updateSession(userId, session, { freeNote: note, freeNoteAt: now().toISOString() });
+    },
+
+    /** 読書中のメモ。AI は呼ばずセッションの memos に追記する(何件でも可) */
+    async addMemo(userId: string, bookId: string, sessionId: string, body: { text?: unknown }) {
+      const text = cleanText(body.text, "text");
+      const { session } = await requireSession(userId, bookId, sessionId);
+      const memos = [...(session.memos ?? [])];
+      if (memos.length >= MAX_MEMOS) throw new HttpError(400, "too many memos");
+      memos.push({ text, at: now().toISOString() });
+      await repo.updateSession(userId, session, { memos });
+      return { memos };
     },
 
     /** 読了 → P3 で読書ノートを作って保存 */

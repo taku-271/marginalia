@@ -104,6 +104,12 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: new RegExp(`^/api/books/${ID}/sessions/${ID}/memos$`),
+    run: async ({ app }, userId, [bookId, sessionId], body) =>
+      json(201, await app.addMemo(userId, bookId!, sessionId!, body)),
+  },
+  {
+    method: "POST",
     pattern: new RegExp(`^/api/books/${ID}/finish$`),
     run: async ({ app }, userId, [bookId]) => json(200, await app.finishBook(userId, bookId!)),
   },

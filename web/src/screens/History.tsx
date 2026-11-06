@@ -12,7 +12,7 @@ export function History({ bookId }: { bookId: string }) {
   );
   useVisibleView("history", bookId);
 
-  const sessions = data?.sessions.filter((s) => s.question || s.freeNote).reverse() ?? [];
+  const sessions = data?.sessions.filter((s) => s.question || s.freeNote || s.memos?.length).reverse() ?? [];
 
   return (
     <main className="page">
@@ -32,6 +32,11 @@ export function History({ bookId }: { bookId: string }) {
               {formatDate(s.startedAt)}
               {s.durationMinutes !== undefined && ` ・ ${s.durationMinutes}分`}
             </p>
+            {s.memos?.map((m) => (
+              <p key={m.at} className="memo">
+                📝 {m.text}
+              </p>
+            ))}
             {s.question && <p className="q">{s.question}</p>}
             {s.answer ? <p className="a">{s.answer}</p> : s.question && <p className="a skipped">パス</p>}
             {s.freeNote && <p className="memo">{s.freeNote}</p>}
