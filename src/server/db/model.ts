@@ -48,6 +48,8 @@ export interface ReadingSession {
 export interface ReadingNote {
   bookId: string;
   markdown: string;
+  /** 「試してみること」節の本文。材料不足などで無ければ未設定 */
+  tryAction?: string;
   modelId: string;
   generatedAt: string;
 }

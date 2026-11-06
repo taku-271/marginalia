@@ -11,6 +11,11 @@ export function BookDetail({ bookId }: { bookId: string }) {
     [bookId],
     "book_detail.load",
   );
+  const { data: noteData } = useLoad(
+    () => api.get<{ tryAction?: string }>(`/api/books/${bookId}/note`),
+    [bookId],
+    "book_detail.note",
+  );
   const [busy, setBusy] = useState<"start" | "finish" | null>(null);
 
   useEffect(() => events.screenView("book_detail", { bookId }), [bookId]);
@@ -77,6 +82,13 @@ export function BookDetail({ bookId }: { bookId: string }) {
             <button className="btn primary block large" onClick={start} disabled={busy !== null}>
               読みはじめる
             </button>
+          )}
+
+          {book.finishedAt && noteData?.tryAction && (
+            <section className="card">
+              <p className="muted small">読書ノートで試すことにした行動</p>
+              <p>{noteData.tryAction}</p>
+            </section>
           )}
 
           <nav className="menu">
