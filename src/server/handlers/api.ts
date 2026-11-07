@@ -65,6 +65,11 @@ const routes: Route[] = [
     run: async ({ app }, userId, [bookId]) => json(200, await app.getBook(userId, bookId!)),
   },
   {
+    method: "PATCH",
+    pattern: new RegExp(`^/api/books/${ID}$`),
+    run: async ({ app }, userId, [bookId], body) => json(200, await app.updateBook(userId, bookId!, body)),
+  },
+  {
     method: "POST",
     pattern: /^\/api\/books$/,
     run: async ({ app }, userId, _p, body) => json(201, await app.createBook(userId, body)),

@@ -68,6 +68,19 @@ export class Repo {
     return items.map((i) => strip<Book>(i)!);
   }
 
+  /** タイトル・著者を更新する(author が undefined なら著者を外す)。本がなければ ConditionalCheckFailed */
+  async updateBookInfo(userId: string, bookId: string, title: string, author: string | undefined) {
+    await this.doc.send(
+      new UpdateCommand({
+        TableName: this.table,
+        Key: { PK: keys.pk(userId), SK: keys.book(bookId) },
+        UpdateExpression: author === undefined ? "SET title = :t REMOVE author" : "SET title = :t, author = :a",
+        ConditionExpression: "attribute_exists(PK)",
+        ExpressionAttributeValues: author === undefined ? { ":t": title } : { ":t": title, ":a": author },
+      }),
+    );
+  }
+
   async markBookFinished(userId: string, bookId: string, finishedAt: string) {
     await this.doc.send(
       new UpdateCommand({
