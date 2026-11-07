@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useLoad } from "../hooks";
 import { Link, useRouter } from "../router";
 import { api, events, flow } from "../services";
-import type { Book } from "../types";
+import { formatDate } from "../format";
+import type { BookSummary } from "../../../src/server/bookSummary";
 
 export function Home() {
   const { navigate } = useRouter();
   const { data, error, loading, reload } = useLoad(
-    async () => (await api.get<{ books: Book[] }>("/api/books")).books,
+    async () => (await api.get<{ books: BookSummary[] }>("/api/books")).books,
     [],
     "home.load",
   );
@@ -94,7 +95,7 @@ export function Home() {
   );
 }
 
-function BookList({ books }: { books: Book[] }) {
+function BookList({ books }: { books: BookSummary[] }) {
   return (
     <ul className="book-list">
       {books.map((b) => (
@@ -102,7 +103,17 @@ function BookList({ books }: { books: Book[] }) {
           <Link to={{ name: "book", bookId: b.bookId }} className="book-item">
             <span className="book-title">{b.title}</span>
             {b.author && <span className="book-author">{b.author}</span>}
+            {b.sessionCount > 0 && b.lastReadAt && (
+              <span className="book-author">
+                {b.sessionCount}回読書 · 最後は{formatDate(b.lastReadAt)}
+              </span>
+            )}
           </Link>
+          {b.pendingSessionId && (
+            <Link to={{ name: "reading", bookId: b.bookId, sessionId: b.pendingSessionId }} className="link">
+              問いが残っています
+            </Link>
+          )}
         </li>
       ))}
     </ul>
