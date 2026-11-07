@@ -110,6 +110,15 @@ export function createApp(deps: AppDeps) {
       return book;
     },
 
+    /** タイトル・著者の編集。author を "" にすると著者を外す。次の問い・ノート生成から新しい値が使われる */
+    async updateBook(userId: string, bookId: string, body: { title?: unknown; author?: unknown }) {
+      const book = await requireBook(userId, bookId);
+      const title = cleanText(body.title, "title");
+      const author = body.author === undefined || body.author === "" ? undefined : cleanText(body.author, "author");
+      await repo.updateBookInfo(userId, bookId, title, author);
+      return { ...book, title, author };
+    },
+
     async startReading(userId: string, bookId: string) {
       await requireBook(userId, bookId);
       const session: ReadingSession = {

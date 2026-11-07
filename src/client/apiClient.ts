@@ -34,7 +34,7 @@ export function createApiClient(opts: ApiClientOptions) {
   const doFetch = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
 
   async function request<T = unknown>(
-    method: "GET" | "POST",
+    method: "GET" | "POST" | "PATCH",
     path: string,
     body?: unknown,
     options: RequestOptions = {},
@@ -69,6 +69,7 @@ export function createApiClient(opts: ApiClientOptions) {
   return {
     request,
     get: <T>(path: string) => request<T>("GET", path),
+    patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
     post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
       request<T>("POST", path, body ?? {}, options),
   };

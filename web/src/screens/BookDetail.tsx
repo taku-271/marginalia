@@ -6,12 +6,16 @@ import type { Book, ReadingSession } from "../types";
 
 export function BookDetail({ bookId }: { bookId: string }) {
   const { navigate } = useRouter();
-  const { data, error, loading } = useLoad(
+  const { data, error, loading, reload } = useLoad(
     () => api.get<{ book: Book; sessions: ReadingSession[] }>(`/api/books/${bookId}`),
     [bookId],
     "book_detail.load",
   );
   const [busy, setBusy] = useState<"start" | "finish" | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => events.screenView("book_detail", { bookId }), [bookId]);
 
@@ -49,15 +53,60 @@ export function BookDetail({ bookId }: { bookId: string }) {
     }
   }
 
+  function startEdit() {
+    setTitle(book.title);
+    setAuthor(book.author ?? "");
+    setEditing(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch(`/api/books/${bookId}`, { title, author });
+      setEditing(false);
+      reload();
+    } catch (err) {
+      events.captureError("book_detail.edit", err);
+      alert("保存できませんでした");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Shell>
-      <header className="book-header">
-        <h1 className="book-title large">{book.title}</h1>
-        {book.author && <p className="book-author">{book.author}</p>}
-        <p className="stats">
-          {ended.length}回 / 合計{totalMinutes}分{book.finishedAt && " ・ 読了"}
-        </p>
-      </header>
+      {editing ? (
+        <form className="card stack" onSubmit={saveEdit}>
+          <label className="field">
+            <span>タイトル</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus required />
+          </label>
+          <label className="field">
+            <span>著者(任意)</span>
+            <input value={author} onChange={(e) => setAuthor(e.target.value)} />
+          </label>
+          <div className="row">
+            <button type="button" className="btn ghost" onClick={() => setEditing(false)}>
+              キャンセル
+            </button>
+            <button className="btn primary" disabled={saving || !title.trim()}>
+              保存
+            </button>
+          </div>
+        </form>
+      ) : (
+        <header className="book-header">
+          <h1 className="book-title large">{book.title}</h1>
+          {book.author && <p className="book-author">{book.author}</p>}
+          <p className="stats">
+            {ended.length}回 / 合計{totalMinutes}分{book.finishedAt && " ・ 読了"}
+          </p>
+          <button className="btn ghost small" onClick={startEdit}>
+            タイトル・著者を編集
+          </button>
+        </header>
+      )}
 
       {busy === "finish" ? (
         <div className="card center">
