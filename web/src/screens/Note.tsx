@@ -4,6 +4,8 @@ import { useLoad, useVisibleView } from "../hooks";
 import { Link } from "../router";
 import { api, events, flow } from "../services";
 import type { NoteResponse } from "../../../src/client/readingFlow";
+import { buildNoteExport, readingPeriod } from "../../../src/client/noteExport";
+import type { Book, ReadingSession } from "../types";
 
 export function Note({ bookId }: { bookId: string }) {
   const { data, setData, error, loading } = useLoad(
@@ -12,6 +14,8 @@ export function Note({ bookId }: { bookId: string }) {
     "note.load",
   );
   const [regenerating, setRegenerating] = useState(false);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   useVisibleView("note", bookId);
 
@@ -25,6 +29,37 @@ export function Note({ bookId }: { bookId: string }) {
       alert("作り直せませんでした。時間をおいてもう一度お試しください。");
     } finally {
       setRegenerating(false);
+    }
+  }
+
+  async function exportText() {
+    const detail = await api.get<{ book: Book; sessions: ReadingSession[] }>(`/api/books/${bookId}`);
+    return buildNoteExport({
+      title: detail.book.title,
+      author: detail.book.author,
+      ...readingPeriod(detail.sessions, detail.book.finishedAt),
+      markdown: data!.markdown,
+    });
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(await exportText());
+      setShareStatus("コピーしました");
+    } catch (err) {
+      events.captureError("note.copy", err);
+      setShareStatus("コピーできませんでした");
+    }
+  }
+
+  async function share() {
+    try {
+      const text = await exportText();
+      await navigator.share({ text });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      events.captureError("note.share", err);
+      setShareStatus("共有できませんでした");
     }
   }
 
@@ -50,6 +85,23 @@ export function Note({ bookId }: { bookId: string }) {
             <article className="note">
               <Markdown>{data.markdown}</Markdown>
             </article>
+          )}
+          {!empty && !regenerating && (
+            <>
+              <button className="btn block" onClick={copy}>
+                Markdown をコピー
+              </button>
+              {canShare && (
+                <button className="btn ghost block" onClick={share}>
+                  共有
+                </button>
+              )}
+              {shareStatus && (
+                <p className="muted" role="status">
+                  {shareStatus}
+                </p>
+              )}
+            </>
           )}
           <button className="btn ghost block" onClick={regenerate} disabled={regenerating}>
             作り直す
