@@ -171,3 +171,5 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .chip { font: inherit; font-size: 14px; padding: 6px 14px; min-height: 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
 .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+.history-item .history-delete { margin-top: 10px; min-height: 36px; padding: 6px 14px; font-size: 13px; color: var(--muted); }

@@ -192,6 +192,21 @@ export function createApp(deps: AppDeps) {
       await repo.updateSession(userId, session, { freeNote: note, freeNoteAt: now().toISOString() });
     },
 
+    /** 履歴の1回分(問い・回答・メモ)を削除する。ノートは再生成するまで変わらない */
+    async deleteSession(userId: string, bookId: string, sessionId: string) {
+      await requireBook(userId, bookId);
+      const { session } = await requireSession(userId, bookId, sessionId);
+      try {
+        await repo.deleteSession(userId, session);
+      } catch (err) {
+        // 同時に別の操作で消えていた場合
+        if ((err as { name?: string }).name === "ConditionalCheckFailedException") {
+          throw new HttpError(404, "session not found");
+        }
+        throw err;
+      }
+    },
+
     /** 読了 → P3 で読書ノートを作って保存 */
     async finishBook(userId: string, bookId: string) {
       await requireBook(userId, bookId);

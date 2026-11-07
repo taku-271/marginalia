@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   BatchWriteCommand,
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -123,6 +124,17 @@ export class Repo {
           .join(" "),
         ExpressionAttributeNames: names,
         ...(Object.keys(values).length ? { ExpressionAttributeValues: values } : {}),
+        ConditionExpression: "attribute_exists(PK)",
+      }),
+    );
+  }
+
+  /** セッション(1回分の問い・回答・メモ)を削除する。存在しなければ ConditionalCheckFailedException */
+  async deleteSession(userId: string, s: ReadingSession) {
+    await this.doc.send(
+      new DeleteCommand({
+        TableName: this.table,
+        Key: { PK: keys.pk(userId), SK: keys.session(s.bookId, s.startedAt, s.sessionId) },
         ConditionExpression: "attribute_exists(PK)",
       }),
     );
