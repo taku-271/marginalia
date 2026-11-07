@@ -90,6 +90,16 @@ export class Repo {
     return items.map((i) => strip<ReadingSession>(i)!);
   }
 
+  /** 全本のセッション(本棚のサマリ用。PK 配下を1回のクエリで取る) */
+  async listAllSessions(userId: string): Promise<ReadingSession[]> {
+    const items = await queryAll(this.doc, {
+      TableName: this.table,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: { ":pk": keys.pk(userId), ":sk": "SESSION#" },
+    });
+    return items.map((i) => strip<ReadingSession>(i)!);
+  }
+
   async putSession(userId: string, s: ReadingSession) {
     await this.doc.send(
       new PutCommand({

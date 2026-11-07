@@ -1,3 +1,4 @@
+import { summarizeBooks } from "./bookSummary.js";
 import { ulid } from "ulid";
 import type { AppConfig } from "./config.js";
 import type { Llm } from "./ai/bedrock.js";
@@ -206,8 +207,8 @@ export function createApp(deps: AppDeps) {
 
     /** 本の一覧(登録の新しい順) */
     async listBooks(userId: string) {
-      const books = await repo.listBooks(userId);
-      return books.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const [books, sessions] = await Promise.all([repo.listBooks(userId), repo.listAllSessions(userId)]);
+      return summarizeBooks(books, sessions).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
 
     /** 本の詳細と全セッション(古い順)。履歴画面・読書中の再開に使う */
