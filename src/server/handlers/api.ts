@@ -103,6 +103,15 @@ const routes: Route[] = [
     },
   },
   {
+    // CloudFront 経由でも通るよう、他の操作と同じく POST で削除する
+    method: "POST",
+    pattern: new RegExp(`^/api/books/${ID}/sessions/${ID}/delete$`),
+    run: async ({ app }, userId, [bookId, sessionId]) => {
+      await app.deleteSession(userId, bookId!, sessionId!);
+      return noContent;
+    },
+  },
+  {
     method: "POST",
     pattern: new RegExp(`^/api/books/${ID}/finish$`),
     run: async ({ app }, userId, [bookId]) => json(200, await app.finishBook(userId, bookId!)),
