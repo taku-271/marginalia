@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { QuestionType } from "../../../src/shared/questionTypes";
+import { browserDraftStorage, clearDraft, loadDraft, saveDraft } from "../../../src/client/draftStore";
 import { FREE_NOTE_PROMPT } from "../../../src/client/readingFlow";
 import { formatElapsed } from "../format";
 import { canSpeak, primeSpeech, speak, stopSpeaking, useAutoRead } from "../speech";
@@ -133,7 +134,7 @@ function Question(props: {
   onDone: (reaction?: string) => void;
 }) {
   const handle = useRef<QuestionHandle | null>(null);
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(() => loadDraft(browserDraftStorage(), "answer", props.sessionId));
   const [usedVoice, setUsedVoice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -155,13 +156,20 @@ function Question(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.bookId, props.sessionId, props.question, props.questionType]);
 
+  function changeAnswer(v: string) {
+    setAnswer(v);
+    saveDraft(browserDraftStorage(), "answer", props.sessionId, v);
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!answer.trim() || !handle.current) return;
     stopSpeaking();
     setBusy(true);
     try {
-      props.onDone(await handle.current.answer(answer, { usedVoice }));
+      const reaction = await handle.current.answer(answer, { usedVoice });
+      clearDraft(browserDraftStorage(), "answer", props.sessionId);
+      props.onDone(reaction);
     } catch (err) {
       events.captureError("question.answer", err);
       alert("送信できませんでした。もう一度お試しください。");
@@ -175,6 +183,7 @@ function Question(props: {
     setBusy(true);
     try {
       await handle.current.skip();
+      clearDraft(browserDraftStorage(), "answer", props.sessionId);
       props.onDone();
     } catch (err) {
       events.captureError("question.skip", err);
@@ -203,7 +212,7 @@ function Question(props: {
       <VoiceField
         className="answer"
         value={answer}
-        onChange={setAnswer}
+        onChange={changeAnswer}
         onVoiceUsed={() => setUsedVoice(true)}
         placeholder="思いついたことを、ひとことで"
         rows={4}
@@ -222,15 +231,21 @@ function Question(props: {
 }
 
 function FreeNote(props: { bookId: string; sessionId: string; reaction?: string; onDone: () => void }) {
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState(() => loadDraft(browserDraftStorage(), "freeNote", props.sessionId));
   const [usedVoice, setUsedVoice] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  function changeNote(v: string) {
+    setNote(v);
+    saveDraft(browserDraftStorage(), "freeNote", props.sessionId, v);
+  }
 
   async function close(e?: FormEvent) {
     e?.preventDefault();
     setBusy(true);
     try {
       await flow.submitFreeNote(props.bookId, props.sessionId, note, { usedVoice });
+      clearDraft(browserDraftStorage(), "freeNote", props.sessionId);
       props.onDone();
     } catch (err) {
       events.captureError("free_note.submit", err);
@@ -246,7 +261,7 @@ function FreeNote(props: { bookId: string; sessionId: string; reaction?: string;
         <span>{FREE_NOTE_PROMPT}</span>
         <VoiceField
           value={note}
-          onChange={setNote}
+          onChange={changeNote}
           onVoiceUsed={() => setUsedVoice(true)}
           rows={3}
           placeholder="なければそのまま閉じてOK"
