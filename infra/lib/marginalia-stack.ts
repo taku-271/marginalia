@@ -152,6 +152,9 @@ export class MarginaliaStack extends cdk.Stack {
         origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        // AWS 管理ポリシー(HSTS・X-Content-Type-Options・X-Frame-Options・Referrer-Policy・X-XSS-Protection)。
+        // 独自ポリシーではなく管理ポリシーなので Free プランの「独自ポリシー不可」には当たらない想定。CSP は別タスク。
+        responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.SECURITY_HEADERS,
         functionAssociations: [
           { function: spaRewrite, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST },
         ],
