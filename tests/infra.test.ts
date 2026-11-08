@@ -59,6 +59,17 @@ describe("MarginaliaStack", () => {
     });
   });
 
+  it("画面配信(既定ビヘイビア)に AWS 管理のセキュリティヘッダーポリシーが付く", () => {
+    t.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        DefaultCacheBehavior: Match.objectLike({
+          // AWS 管理の SecurityHeadersPolicy
+          ResponseHeadersPolicyId: "67f7725c-6f97-4210-82d7-5512b31e9d03",
+        }),
+      }),
+    });
+  });
+
   it("Bedrock の権限は指定モデルだけ", () => {
     const policies = JSON.stringify(t.findResources("AWS::IAM::Policy"));
     expect(policies).toContain(":bedrock:ap-northeast-1:");
